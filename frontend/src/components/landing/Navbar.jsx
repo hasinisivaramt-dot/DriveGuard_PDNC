@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ShieldCheck, LogIn, ArrowRight, Menu, X } from "lucide-react";
 
@@ -13,6 +13,46 @@ const LINKS = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
+
+  useEffect(() => {
+    const sections = ["home", "features", "how-it-works", "about", "pricing", "contact"];
+    const observerOptions = {
+      root: null,
+      rootMargin: "-20% 0px -60% 0px",
+      threshold: 0,
+    };
+
+    const observerCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    const handleScroll = () => {
+      if (window.scrollY < 50) {
+        setActiveSection("home");
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      sections.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) observer.unobserve(el);
+      });
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-100 bg-white/90 backdrop-blur">
@@ -30,22 +70,25 @@ export default function Navbar() {
         </a>
 
         <nav className="hidden items-center gap-8 lg:flex">
-          {LINKS.map((link, i) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className={`relative text-[14.5px] font-medium transition-colors ${
-                i === 0
-                  ? "text-maroon-600"
-                  : "text-neutral-600 hover:text-maroon-600"
-              }`}
-            >
-              {link.label}
-              {i === 0 && (
-                <span className="absolute -bottom-[26px] left-0 h-[2px] w-full bg-maroon-600" />
-              )}
-            </a>
-          ))}
+          {LINKS.map((link) => {
+            const isActive = link.href === `#${activeSection}`;
+            return (
+              <a
+                key={link.label}
+                href={link.href}
+                className={`relative text-[14.5px] font-medium transition-colors ${
+                  isActive
+                    ? "text-maroon-600"
+                    : "text-neutral-600 hover:text-maroon-600"
+                }`}
+              >
+                {link.label}
+                {isActive && (
+                  <span className="absolute -bottom-[26px] left-0 h-[2px] w-full bg-maroon-600" />
+                )}
+              </a>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
@@ -69,16 +112,23 @@ export default function Navbar() {
       {open && (
         <div className="border-t border-neutral-100 px-6 pb-6 pt-2 lg:hidden">
           <nav className="flex flex-col gap-3">
-            {LINKS.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="py-1.5 text-[15px] font-medium text-neutral-700"
-              >
-                {link.label}
-              </a>
-            ))}
+            {LINKS.map((link) => {
+              const isActive = link.href === `#${activeSection}`;
+              return (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className={`py-1.5 text-[15px] font-medium transition-colors ${
+                    isActive
+                      ? "text-maroon-600 font-semibold"
+                      : "text-neutral-700 hover:text-maroon-600"
+                  }`}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
           </nav>
           <div className="mt-4 flex gap-3">
             <Link to="/login" onClick={() => setOpen(false)} className="flex-1 rounded-lg border border-neutral-200 py-2 text-center text-sm font-semibold text-neutral-700">

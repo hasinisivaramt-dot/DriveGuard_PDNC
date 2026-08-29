@@ -6,6 +6,10 @@ html {
   scroll-behavior: smooth;
 }
 
+section[id], footer[id] {
+  scroll-margin-top: 72px;
+}
+
 body {
   @apply font-body text-neutral-900 bg-white antialiased;
 }
