@@ -1,0 +1,25 @@
+# Node
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Data & model artifacts
+data/*
+!data/README.md
+models/*.pkl
+models/*.pt
+!models/README.md
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store

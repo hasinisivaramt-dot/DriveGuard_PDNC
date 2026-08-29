@@ -1,0 +1,68 @@
+// Placeholder data shaped like the future `vehicles` / `predictions`
+// MongoDB collections. Swap for real API calls once the backend and ML
+// pipeline are wired up (Phase 7-9) — nothing here is a real prediction.
+
+export const myVehicles = [
+  {
+    id: "MH 01 AB 1234",
+    nickname: "Family Sedan",
+    manufacturer: "Maruti Suzuki",
+    model: "Dzire",
+    year: 2021,
+    fuelType: "Petrol",
+    type: "Sedan",
+    odometer: "42,300 km",
+    health: 82,
+    status: "Good",
+    failureRisk: 12,
+    rul: 1450,
+    riskLevel: "Low",
+  },
+  {
+    id: "KA 03 CD 5678",
+    nickname: "Weekend SUV",
+    manufacturer: "Hyundai",
+    model: "Creta",
+    year: 2020,
+    fuelType: "Diesel",
+    type: "SUV",
+    odometer: "58,900 km",
+    health: 65,
+    status: "Moderate",
+    failureRisk: 24,
+    rul: 890,
+    riskLevel: "Moderate",
+  },
+  {
+    id: "DL 08 EF 9012",
+    nickname: "City Runabout",
+    manufacturer: "Tata",
+    model: "Altroz",
+    year: 2022,
+    fuelType: "Petrol",
+    type: "Hatchback",
+    odometer: "21,150 km",
+    health: 76,
+    status: "Good",
+    failureRisk: 15,
+    rul: 1210,
+    riskLevel: "Low",
+  },
+  {
+    id: "GJ 05 GH 3456",
+    nickname: "Old Reliable",
+    manufacturer: "Mahindra",
+    model: "XUV500",
+    year: 2016,
+    fuelType: "Diesel",
+    type: "SUV",
+    odometer: "112,400 km",
+    health: 42,
+    status: "High Risk",
+    failureRisk: 48,
+    rul: 420,
+    riskLevel: "High",
+  },
+];
+
+export const vehicleIds = myVehicles.map((v) => v.id);
