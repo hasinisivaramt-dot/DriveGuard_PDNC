@@ -11,7 +11,12 @@ const STYLES = {
   "Critical Risk": "bg-red-100 text-red-700",
   "In Progress": "bg-blue-50 text-blue-600",
   Pending: "bg-neutral-100 text-neutral-600",
+  // Vehicle status values used in Fleet Overview
+  Active: "bg-emerald-50 text-emerald-600",
+  "In Service": "bg-violet-50 text-violet-600",
+  Offline: "bg-neutral-100 text-neutral-500",
 };
+
 
 export default function StatusBadge({ status, className = "" }) {
   return (

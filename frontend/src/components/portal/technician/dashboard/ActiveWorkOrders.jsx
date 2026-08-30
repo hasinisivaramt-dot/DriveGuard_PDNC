@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Eye } from "lucide-react";
 import { activeWorkOrders } from "../../../../data/mockTechnician.js";
 import StatusBadge from "../../dashboard/StatusBadge.jsx";
 
 export default function ActiveWorkOrders() {
+  const navigate = useNavigate();
+
   return (
     <div className="rounded-2xl border border-neutral-100 bg-white p-5 shadow-card">
       <div className="flex items-center justify-between">
@@ -42,7 +44,15 @@ export default function ActiveWorkOrders() {
                 <td className="py-2.5 text-neutral-600">{w.assignedTo}</td>
                 <td className="py-2.5 text-neutral-600">{w.dueDate}</td>
                 <td className="py-2.5">
-                  <button className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-50 hover:text-blue-600">
+                  {/* Navigate to diagnostics for the vehicle in this work order */}
+                  <button
+                    id={`awo-view-${w.orderId}`}
+                    onClick={() =>
+                      navigate(`/portal/technician/diagnostics?vin=${encodeURIComponent(w.vehicle)}`)
+                    }
+                    title={`View diagnostics for ${w.vehicle}`}
+                    className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-50 hover:text-blue-600"
+                  >
                     <Eye className="h-4 w-4" />
                   </button>
                 </td>

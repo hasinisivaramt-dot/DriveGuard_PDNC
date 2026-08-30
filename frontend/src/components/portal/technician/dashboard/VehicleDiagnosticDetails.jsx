@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { ChevronDown, Sparkles } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ChevronDown, Sparkles, CheckCircle2, UserCircle } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -36,33 +37,77 @@ function MiniStat({ label, value, suffix, sparkline, color, valueClass }) {
   );
 }
 
+function Toast({ msg, onDismiss }) {
+  if (!msg) return null;
+  return (
+    <div
+      role="alert"
+      style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999 }}
+      className="flex max-w-xs items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-3 shadow-lg text-emerald-700"
+    >
+      <CheckCircle2 className="h-4 w-4 shrink-0" />
+      <p className="text-[13px] font-medium">{msg}</p>
+      <button onClick={onDismiss} className="ml-2 text-neutral-400 hover:text-neutral-600">×</button>
+    </div>
+  );
+}
+
 export default function VehicleDiagnosticDetails() {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState(vehicleOptions[3] || vehicleOptions[0]);
-  const [open, setOpen] = useState(false);
-  const data = vehicleDiagnostics[selected] || vehicleDiagnostics[vehicleOptions[3]];
+  const [open, setOpen]         = useState(false);
+  const [analysing, setAnalysing] = useState(false);
+  const [toast, setToast]       = useState(null);
+  const toastRef                = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (!e.target.closest("#vdd-vehicle-selector")) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  useEffect(() => {
+    if (!toast) return;
+    clearTimeout(toastRef.current);
+    toastRef.current = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(toastRef.current);
+  }, [toast]);
+
+  const data = vehicleDiagnostics[selected] ?? vehicleDiagnostics[vehicleOptions[0]];
+
+  async function handleRunAnalysis() {
+    if (analysing) return;
+    setAnalysing(true);
+    await new Promise((r) => setTimeout(r, 1800));
+    setAnalysing(false);
+    setToast(`Analysis complete for ${selected}. All readings refreshed.`);
+  }
 
   return (
     <div className="rounded-2xl border border-neutral-100 bg-white p-5 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-[14.5px] font-bold text-neutral-900">Vehicle Diagnostic Details</h3>
         <div className="flex items-center gap-3">
-          <div className="relative">
+          {/* Vehicle selector */}
+          <div className="relative" id="vdd-vehicle-selector">
             <button
+              id="vdd-vehicle-btn"
               onClick={() => setOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-[13px] font-medium text-neutral-700"
+              className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2 text-[13px] font-medium text-neutral-700 hover:border-blue-300"
             >
               {selected} <ChevronDown className="h-3.5 w-3.5" />
             </button>
             {open && (
-              <div className="absolute right-0 z-10 mt-1 w-44 rounded-lg border border-neutral-100 bg-white py-1 shadow-card">
+              <div className="absolute right-0 z-10 mt-1 w-48 rounded-lg border border-neutral-100 bg-white py-1 shadow-card">
                 {vehicleOptions.map((v) => (
                   <button
                     key={v}
-                    onClick={() => {
-                      setSelected(v);
-                      setOpen(false);
-                    }}
-                    className="block w-full px-3 py-1.5 text-left text-[12.5px] text-neutral-600 hover:bg-neutral-50"
+                    onClick={() => { setSelected(v); setOpen(false); }}
+                    className={`block w-full px-3 py-1.5 text-left text-[12.5px] hover:bg-neutral-50 ${v === selected ? "font-semibold text-blue-700" : "text-neutral-600"}`}
                   >
                     {v}
                   </button>
@@ -70,8 +115,16 @@ export default function VehicleDiagnosticDetails() {
               </div>
             )}
           </div>
-          <button className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-blue-700">
-            <Sparkles className="h-3.5 w-3.5" /> Run New Analysis
+
+          {/* Run New Analysis */}
+          <button
+            id="vdd-run-analysis"
+            onClick={handleRunAnalysis}
+            disabled={analysing}
+            className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white transition ${analysing ? "cursor-not-allowed bg-blue-400" : "bg-blue-600 hover:bg-blue-700"}`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {analysing ? "Analysing…" : "Run New Analysis"}
           </button>
         </div>
       </div>
@@ -107,8 +160,15 @@ export default function VehicleDiagnosticDetails() {
               <dd className="font-semibold text-neutral-800">{data.owner}</dd>
             </div>
           </dl>
-          <button className="mt-3 w-full rounded-lg border border-neutral-200 py-2 text-[12.5px] font-semibold text-neutral-700 hover:bg-neutral-50">
-            View Full Profile
+
+          {/* View Full Profile → navigate to diagnostics for this vehicle */}
+          <button
+            id="vdd-view-diagnostics"
+            onClick={() => navigate(`/portal/technician/diagnostics?vin=${encodeURIComponent(selected)}`)}
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-neutral-200 py-2 text-[12.5px] font-semibold text-neutral-700 hover:bg-neutral-50"
+          >
+            <UserCircle className="h-3.5 w-3.5 text-neutral-400" />
+            View Full Diagnostics
           </button>
         </div>
 
@@ -180,6 +240,8 @@ export default function VehicleDiagnosticDetails() {
           </div>
         </div>
       </div>
+
+      <Toast msg={toast} onDismiss={() => setToast(null)} />
     </div>
   );
 }

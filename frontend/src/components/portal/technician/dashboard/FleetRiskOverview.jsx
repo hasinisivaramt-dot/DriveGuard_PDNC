@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Eye } from "lucide-react";
 import { fleetRiskOverview } from "../../../../data/mockTechnician.js";
 import StatusBadge from "../../dashboard/StatusBadge.jsx";
 
 export default function FleetRiskOverview() {
+  const navigate = useNavigate();
+
   return (
     <div className="rounded-2xl border border-neutral-100 bg-white p-5 shadow-card">
       <div className="flex items-center justify-between">
@@ -40,7 +42,15 @@ export default function FleetRiskOverview() {
                 </td>
                 <td className="py-2.5 text-emerald-600">{v.status}</td>
                 <td className="py-2.5">
-                  <button className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-50 hover:text-blue-600">
+                  {/* Navigate to diagnostics with the correct VIN */}
+                  <button
+                    id={`fleet-risk-view-${v.id.replace(/\s/g, "-")}`}
+                    onClick={() =>
+                      navigate(`/portal/technician/diagnostics?vin=${encodeURIComponent(v.id)}`)
+                    }
+                    title={`View diagnostics for ${v.id}`}
+                    className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-50 hover:text-blue-600"
+                  >
                     <Eye className="h-4 w-4" />
                   </button>
                 </td>
