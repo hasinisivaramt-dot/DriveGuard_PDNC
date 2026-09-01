@@ -29,113 +29,310 @@ function ReportModal({ report, onClose }) {
 
   function exportPdf() {
     const doc = new jsPDF({ unit: "mm", format: "a4" });
-    const margin = 18;
-    let y = 20;
-    const lineH = 7;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let y = 15;
 
-    // Header band
-    doc.setFillColor(37, 99, 235);          // blue-600
-    doc.rect(0, 0, 210, 16, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("DRIVEGUARD AI — Service Report", margin, 11);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(`Generated: ${new Date().toLocaleString("en-IN")}`, 210 - margin, 11, { align: "right" });
-
-    y = 26;
-    doc.setTextColor(17, 24, 39);           // neutral-900
-
-    // Report title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.text(`Service Report — ${report.id}`, margin, y);
-    y += lineH + 2;
-
-    // Divider
-    doc.setDrawColor(229, 231, 235);        // neutral-200
-    doc.line(margin, y, 210 - margin, y);
-    y += 5;
-
-    // Two-column metadata grid
-    const pairs = [
-      ["Report ID",    report.id],
-      ["Vehicle",      report.vehicleId],
-      ["Make / Model", report.vehicleName],
-      ["Service Date", report.date],
-      ["Service Type", report.type],
-      ["Technician",   report.technician],
-      ["Work Order",   report.orderId ?? "—"],
-      ["Status",       report.status],
-    ];
-
-    doc.setFontSize(9);
-    pairs.forEach(([k, v], i) => {
-      const col = i % 2 === 0 ? margin : 110;
-      if (i % 2 === 0 && i > 0) y += lineH;
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(107, 114, 128);      // neutral-400
-      doc.text(k.toUpperCase(), col, y);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(17, 24, 39);
-      doc.text(String(v), col, y + 4);
-    });
-    y += lineH + 6;
-
-    doc.line(margin, y, 210 - margin, y);
-    y += 6;
-
-    // Findings
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(107, 114, 128);
-    doc.text("FINDINGS", margin, y);
-    y += 5;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
-    doc.setTextColor(17, 24, 39);
-    const findLines = doc.splitTextToSize(report.findings, 170);
-    doc.text(findLines, margin, y);
-    y += findLines.length * 5 + 5;
-
-    // Recommendations
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(107, 114, 128);
-    doc.text("RECOMMENDATIONS", margin, y);
-    y += 5;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
-    doc.setTextColor(17, 24, 39);
-    const recLines = doc.splitTextToSize(report.recommendations, 170);
-    doc.text(recLines, margin, y);
-    y += recLines.length * 5 + 5;
-
-    // Cost breakdown (completed only)
-    if (isCompleted && report.totalCost && report.totalCost !== "—") {
-      doc.line(margin, y, 210 - margin, y);
-      y += 6;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(107, 114, 128);
-      doc.text("COST BREAKDOWN", margin, y);
-      y += 5;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9.5);
-      doc.setTextColor(17, 24, 39);
-      [["Labour Cost", report.laborCost], ["Parts Cost", report.partsCost], ["Total Cost", report.totalCost]].forEach(([k, v]) => {
-        doc.text(k + ":", margin, y);
-        doc.text(String(v), 210 - margin, y, { align: "right" });
-        y += lineH;
-      });
+    // Helper: format numbers safely (avoids jsPDF spacing issues with toLocaleString)
+    function formatAmount(val) {
+      if (val == null || val === "—") return "—";
+      const str = String(val).trim();
+      let prefix = "";
+      if (str.startsWith("₹") || str.startsWith("$")) prefix = str[0] + " ";
+      const cleanNumStr = str.replace(/[^\d.]/g, "");
+      if (!cleanNumStr) return str;
+      const num = parseFloat(cleanNumStr);
+      if (isNaN(num)) return str;
+      
+      const parts = num.toFixed(0).split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      return prefix + parts.join(".");
     }
 
-    // Footer
-    doc.setFont("helvetica", "italic");
+    // Helper: format date safely
+    function formatDateTime(d) {
+      const date = new Date(d);
+      if (isNaN(date.getTime())) return d;
+      const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      let hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const strTime = String(hours).padStart(2, "0") + ":" + minutes + " " + ampm;
+      return `${day} ${month} ${year}, ${strTime}`;
+    }
+    
+    function formatDateOnly(d) {
+      if (!d || d === "—") return "—";
+      const date = new Date(d);
+      if (isNaN(date.getTime())) return d;
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${String(date.getDate()).padStart(2, "0")} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    }
+
+    // --- HEADER ---
+    doc.setFillColor(15, 30, 80);
+    doc.rect(0, 0, pageWidth, 25, "F");
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("DRIVEGUARD AI", margin, 12);
+    
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor(156, 163, 175);
-    doc.text("This is a mock service report generated by DriveGuard AI Technician Portal.", margin, 285);
+    doc.text("Predict. Prevent. Protect.", margin, 18);
+
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(0.5);
+    doc.line(pageWidth - margin - 50, 8, pageWidth - margin - 50, 19);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.text("GENERATED ON", pageWidth - margin, 12, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(formatDateTime(new Date()), pageWidth - margin, 17, { align: "right" });
+
+    y = 38;
+
+    // --- REPORT TITLE ---
+    doc.setTextColor(15, 30, 80);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("SERVICE REPORT", margin, y);
+    
+    const titleWidth = doc.getTextWidth("SERVICE REPORT");
+    doc.setFillColor(15, 30, 80);
+    doc.roundedRect(margin + titleWidth + 5, y - 7, doc.getTextWidth(report.id) + 8, 9, 1.5, 1.5, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text(report.id, margin + titleWidth + 9, y - 0.5);
+
+    y += 7;
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text("Professional Vehicle Service Summary", margin, y);
+
+    y += 12;
+
+    // --- VEHICLE / SERVICE INFORMATION ---
+    doc.setDrawColor(220, 220, 220);
+    doc.setFillColor(252, 252, 252);
+    const infoHeight = 42;
+    doc.roundedRect(margin, y, pageWidth - margin * 2, infoHeight, 2, 2, "FD");
+
+    const leftColX = margin + 12;
+    const rightColX = margin + 95;
+    let infoY = y + 8;
+    const rowH = 9;
+
+    const leftData = [
+      { label: "Report ID", value: report.id },
+      { label: "Make / Model", value: report.vehicleName },
+      { label: "Service Type", value: report.type },
+      { label: "Work Order", value: report.orderId ?? "—" }
+    ];
+
+    const rightData = [
+      { label: "Vehicle", value: report.vehicleId },
+      { label: "Service Date", value: formatDateOnly(report.date) },
+      { label: "Technician", value: report.technician },
+      { label: "Status", value: report.status }
+    ];
+
+    for (let i = 0; i < 4; i++) {
+      // Left
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(130, 130, 130);
+      doc.text(leftData[i].label, leftColX, infoY + i * rowH);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(30, 30, 30);
+      doc.text(leftData[i].value, leftColX, infoY + 4 + i * rowH);
+
+      // Right
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(130, 130, 130);
+      doc.text(rightData[i].label, rightColX, infoY + i * rowH);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      
+      if (i === 3) {
+         if (report.status === "Completed") {
+           doc.setTextColor(16, 185, 129); // green
+           doc.text(`✓ ${report.status}`, rightColX, infoY + 4 + i * rowH);
+         } else {
+           doc.setTextColor(245, 158, 11); // amber
+           doc.text(`○ ${report.status}`, rightColX, infoY + 4 + i * rowH);
+         }
+      } else {
+         doc.setTextColor(30, 30, 30);
+         doc.text(rightData[i].value, rightColX, infoY + 4 + i * rowH);
+      }
+    }
+    
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineWidth(0.3);
+    doc.line(margin + (pageWidth - margin * 2)/2, y + 5, margin + (pageWidth - margin * 2)/2, y + infoHeight - 5);
+
+    y += infoHeight + 8;
+
+    // --- FINDINGS & RECOMMENDATIONS ---
+    const boxW = (pageWidth - margin * 2 - 5) / 2;
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const findLines = doc.splitTextToSize(report.findings || "No findings recorded.", boxW - 10);
+    const recLines = doc.splitTextToSize(report.recommendations || "No recommendations recorded.", boxW - 10);
+    const findingsH = Math.max(30, findLines.length * 5 + 15);
+    const recH = Math.max(30, recLines.length * 5 + 15);
+    const boxesHeight = Math.max(findingsH, recH);
+
+    if (y + boxesHeight > pageHeight - 30) {
+      doc.addPage();
+      y = 20;
+    }
+
+    // Left Box (Findings)
+    doc.setDrawColor(220, 220, 220);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin, y, boxW, boxesHeight, 2, 2, "FD");
+    
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(37, 99, 235);
+    doc.setFontSize(9);
+    doc.text("FINDINGS", margin + 5, y + 8);
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(0.5);
+    doc.line(margin + 5, y + 11, margin + boxW - 5, y + 11);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(10);
+    doc.text(findLines, margin + 5, y + 18);
+
+    // Right Box (Recommendations)
+    doc.setDrawColor(220, 220, 220);
+    doc.roundedRect(margin + boxW + 5, y, boxW, boxesHeight, 2, 2, "FD");
+    
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(37, 99, 235);
+    doc.setFontSize(9);
+    doc.text("RECOMMENDATIONS", margin + boxW + 10, y + 8);
+    doc.line(margin + boxW + 10, y + 11, margin + boxW * 2, y + 11);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(10);
+    doc.text(recLines, margin + boxW + 10, y + 18);
+
+    y += boxesHeight + 8;
+
+    // --- COST BREAKDOWN ---
+    if (isCompleted && report.totalCost && report.totalCost !== "—") {
+      if (y + 45 > pageHeight - 30) {
+        doc.addPage();
+        y = 20;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(37, 99, 235);
+      doc.setFontSize(10);
+      doc.text("COST BREAKDOWN", margin, y + 4);
+
+      y += 6;
+      
+      doc.setDrawColor(220, 220, 220);
+      doc.setFillColor(255, 255, 255);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, 30, 2, 2, "FD");
+
+      // Table Header
+      doc.setFillColor(240, 245, 255);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, 8, 2, 2, "F");
+      doc.rect(margin, y + 4, pageWidth - margin * 2, 4, "F");
+      
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(37, 99, 235);
+      doc.setFontSize(8);
+      doc.text("ITEM", margin + 5, y + 5.5);
+      doc.text("AMOUNT", pageWidth - margin - 5, y + 5.5, { align: "right" });
+
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(50, 50, 50);
+      doc.setFontSize(9.5);
+      doc.text("Labour Cost", margin + 5, y + 5.5);
+      doc.text(formatAmount(report.laborCost), pageWidth - margin - 5, y + 5.5, { align: "right" });
+
+      doc.setDrawColor(230, 230, 230);
+      doc.setLineDashPattern([1, 1], 0);
+      doc.line(margin + 5, y + 8, pageWidth - margin - 5, y + 8);
+      doc.setLineDashPattern([], 0);
+
+      y += 8;
+      doc.text("Parts Cost", margin + 5, y + 5.5);
+      doc.text(formatAmount(report.partsCost), pageWidth - margin - 5, y + 5.5, { align: "right" });
+
+      y += 8;
+      // Total background
+      doc.setFillColor(240, 245, 255);
+      doc.roundedRect(margin, y - 2, pageWidth - margin * 2, 8, 2, 2, "F");
+      doc.rect(margin, y - 2, pageWidth - margin * 2, 4, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 30, 80);
+      doc.setFontSize(10.5);
+      doc.text("TOTAL COST", margin + 5, y + 3.5);
+      
+      doc.setTextColor(37, 99, 235);
+      doc.text(formatAmount(report.totalCost), pageWidth - margin - 5, y + 3.5, { align: "right" });
+      
+      y += 10;
+    }
+
+    // --- THANK YOU & FOOTER ---
+    if (y + 30 > pageHeight) {
+      doc.addPage();
+      y = 20;
+    }
+    
+    y = Math.max(y + 10, pageHeight - 35);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(9);
+    doc.text("Thank you for choosing DriveGuard AI.", margin, y);
+    doc.setFont("helvetica", "italic");
+    doc.text("Drive safe. We've got your back.", margin, y + 4);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text("Page 1 of 1", pageWidth - margin, y + 4, { align: "right" });
+
+    // Footer line
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(37, 99, 235);
+    doc.setFontSize(8);
+    doc.text("DRIVEGUARD AI", margin, pageHeight - 10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(130, 130, 130);
+    doc.text(" — Technician Service Report", margin + 25, pageHeight - 10);
+
+    doc.setFont("helvetica", "italic");
+    doc.text("This is a system generated document.", pageWidth - margin, pageHeight - 10, { align: "right" });
 
     doc.save(`ServiceReport_${report.id}.pdf`);
   }

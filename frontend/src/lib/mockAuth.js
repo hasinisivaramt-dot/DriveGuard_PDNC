@@ -14,6 +14,7 @@
 const USERS_KEY = "driveguard_users";
 const SESSION_KEY = "driveguard_session";
 const VEHICLE_PROFILE_KEY = "driveguard_vehicle_profile";
+const TECH_PROFILE_KEY = "driveguard_technician_profile";
 
 export const ROLES = {
   USER: "user",
@@ -52,6 +53,8 @@ function toSessionUser(user) {
     // Only the User/Car Owner role goes through the vehicle registration
     // wizard — other roles are considered "onboarded" immediately.
     onboardingComplete: user.role === ROLES.USER ? Boolean(user.onboardingComplete) : true,
+    // Technicians must complete their profile registration before portal access.
+    technicianProfileCompleted: user.role === ROLES.TECHNICIAN ? Boolean(user.technicianProfileCompleted) : true,
   };
 }
 
@@ -60,7 +63,15 @@ export function register({ name, email, password, role }) {
   if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
     throw new Error("An account with that email already exists.");
   }
-  const user = { id: crypto.randomUUID(), name, email, password, role, onboardingComplete: false };
+  const user = {
+    id: crypto.randomUUID(),
+    name,
+    email,
+    password,
+    role,
+    onboardingComplete: false,
+    technicianProfileCompleted: false,
+  };
   writeUsers([...users, user]);
   const session = { token: fakeToken(), user: toSessionUser(user) };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -123,4 +134,41 @@ export function completeOnboarding(userId, vehicleProfile) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
   return session;
+}
+
+/** Marks the technician profile registration as complete and persists the
+ * collected profile data to localStorage (mock — swapped for real API in Phase 8). */
+export function completeTechnicianRegistration(userId, profileData) {
+  const users = readUsers();
+  const updated = users.map((u) =>
+    u.id === userId ? { ...u, technicianProfileCompleted: true } : u
+  );
+  writeUsers(updated);
+
+  if (profileData) {
+    try {
+      const all = JSON.parse(localStorage.getItem(TECH_PROFILE_KEY)) || {};
+      all[userId] = profileData;
+      localStorage.setItem(TECH_PROFILE_KEY, JSON.stringify(all));
+    } catch {
+      // non-critical — mock storage only
+    }
+  }
+
+  const session = getSession();
+  if (session && session.user.id === userId) {
+    session.user.technicianProfileCompleted = true;
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }
+  return session;
+}
+
+/** Retrieves the stored technician profile for a given userId, if any. */
+export function getTechnicianProfile(userId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(TECH_PROFILE_KEY)) || {};
+    return all[userId] || null;
+  } catch {
+    return null;
+  }
 }

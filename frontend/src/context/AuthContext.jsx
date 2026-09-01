@@ -31,6 +31,14 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  const completeTechnicianRegistration = useCallback((profileData) => {
+    setSession((current) => {
+      if (!current) return current;
+      authStore.completeTechnicianRegistration(current.user.id, profileData);
+      return { ...current, user: { ...current.user, technicianProfileCompleted: true } };
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       user: session?.user ?? null,
@@ -39,8 +47,9 @@ export function AuthProvider({ children }) {
       register,
       logout,
       completeOnboarding,
+      completeTechnicianRegistration,
     }),
-    [session, login, register, logout, completeOnboarding]
+    [session, login, register, logout, completeOnboarding, completeTechnicianRegistration]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

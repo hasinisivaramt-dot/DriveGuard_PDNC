@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./routes/ProtectedRoute.jsx";
 import RequireOnboarding from "./routes/RequireOnboarding.jsx";
+import RequireTechnicianRegistration from "./routes/RequireTechnicianRegistration.jsx";
 import { ROLES } from "./lib/mockAuth.js";
 
 import LoadingPage from "./pages/LoadingPage.jsx";
@@ -26,6 +27,7 @@ import Settings from "./pages/portal/user/Settings.jsx";
 import ComingSoon from "./pages/portal/ComingSoon.jsx";
 
 import TechnicianPortalLayout from "./layouts/TechnicianPortalLayout.jsx";
+import TechnicianRegistrationWizard from "./pages/portal/technician/TechnicianRegistrationWizard.jsx";
 import TechnicianDashboard from "./pages/portal/technician/TechnicianDashboard.jsx";
 import FleetOverview from "./pages/portal/technician/FleetOverview.jsx";
 import VehicleDiagnostics from "./pages/portal/technician/VehicleDiagnostics.jsx";
@@ -105,12 +107,27 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
 
-        {/* Technician / Engineer portal */}
+        {/* ── Technician Registration Wizard ──
+            Shown ONLY to authenticated technicians who haven't completed registration.
+            Lives outside the TechnicianPortalLayout so there's no sidebar. */}
+        <Route
+          path="/portal/technician/registration"
+          element={
+            <ProtectedRoute allowedRoles={[ROLES.TECHNICIAN]}>
+              <TechnicianRegistrationWizard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Technician / Engineer portal — wrapped with RequireTechnicianRegistration
+            so every child route redirects to /registration if profile is incomplete */}
         <Route
           path="/portal/technician"
           element={
             <ProtectedRoute allowedRoles={[ROLES.TECHNICIAN]}>
-              <TechnicianPortalLayout />
+              <RequireTechnicianRegistration>
+                <TechnicianPortalLayout />
+              </RequireTechnicianRegistration>
             </ProtectedRoute>
           }
         >

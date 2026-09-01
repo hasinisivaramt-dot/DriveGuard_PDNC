@@ -178,9 +178,19 @@ export default function ProfileSettings() {
                 <p className="text-[11.5px] text-neutral-400">{sub}</p>
               </div>
               <button id={`notif-${key}`}
+                role="switch"
+                aria-checked={!!notifs[key]}
                 onClick={() => setNotifs((n) => ({ ...n, [key]: !n[key] }))}
-                className={`relative h-5 w-9 rounded-full transition-colors ${notifs[key] ? "bg-blue-600" : "bg-neutral-200"}`}>
-                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${notifs[key] ? "translate-x-4" : "translate-x-0.5"}`} />
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 ${
+                  notifs[key] ? "bg-blue-600" : "bg-neutral-300"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ${
+                    notifs[key] ? "translate-x-[22px]" : "translate-x-[2px]"
+                  }`}
+                  style={{ marginTop: "2px" }}
+                />
               </button>
             </div>
           ))}
